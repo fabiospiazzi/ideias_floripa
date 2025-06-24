@@ -13,9 +13,9 @@ def main():
     df = pd.read_csv(caminho_arquivo)
 
     # Modelo de sentimento
-    model_name = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    model_name = "pierreguillou/bert-base-cased-sentiment-analysis-sst-2-portuguese"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name
     sentiment_analyzer = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
     # Configuração da página
