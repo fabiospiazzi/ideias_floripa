@@ -25,8 +25,8 @@ def main():
     # Análise de sentimento + contagem de tokens
     def analisar_sentimento_com_tokens(texto):
         try:
-            tokens = tokenizer.encode(texto, truncation=True, max_length=512)
-            num_tokens = len(tokens)
+            tokens = tokenizer(texto, truncation=True, max_length=512, return_tensors=None)
+            num_tokens = len(tokens['input_ids'][0])
             resultado = sentiment_analyzer(texto[:512])[0]
             return pd.Series([resultado['label'], float(resultado['score']), num_tokens])
         except Exception as e:
