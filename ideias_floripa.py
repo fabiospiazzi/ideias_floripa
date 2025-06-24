@@ -20,6 +20,10 @@ def main():
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     sentiment_analyzer = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
+    # Configuração da página
+    PAGE_CONFIG = {"page_title":"Demandas de Ideias - Florianópolis", "page_icon":":smiley:", "layout":"centered"}
+    st.set_page_config(**PAGE_CONFIG)
+
     # Análise de sentimento + contagem de tokens
     def analisar_sentimento_com_tokens(texto):
         try:
