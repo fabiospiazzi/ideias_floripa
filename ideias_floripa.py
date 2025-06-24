@@ -52,19 +52,13 @@ def geocodificar_bairro(bairro):
 # Carrega modelo
 @st.cache_resource
 def carregar_modelo():
+    print("Carregando o modelo")
     model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
+    print("Tokenizando...")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
+    print("Jogando o modelo pré-treinado para o model")
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     return pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
-
-def interpretar_estrela(label):
-    estrelas = int(label[0])
-    if estrelas <= 2:
-        return "Negativo"
-    elif estrelas == 3:
-        return "Neutro"
-    else:
-        return "Positivo"
 
 # App principal
 def main():
@@ -84,9 +78,12 @@ def main():
 
     def analisar_sentimento_completo(texto):
         try:
+            print("Chamando o resultado")
             resultado = sentiment_analyzer(texto[:512])[0]  # resultado é dict com 'label' e 'score'
             label = resultado.get('label', '')
+            print("Label", label)
             score = resultado.get('score', 0.0)
+            print("Score", score)
         
             # Label deve ser do tipo '4 stars', por exemplo
             match = re.match(r"(\d)\s+star", label)
