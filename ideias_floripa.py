@@ -14,7 +14,7 @@ def main():
 
     # Modelo de sentimento
     model_name = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=False)
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     sentiment_analyzer = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
 
