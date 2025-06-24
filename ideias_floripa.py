@@ -83,14 +83,29 @@ def main():
     sentiment_analyzer = carregar_modelo()
 
     def analisar_sentimento_completo(texto):
-        try:
-            tokens = sentiment_analyzer.tokenizer(texto, truncation=True, max_length=512, return_tensors=None)
+    try:
+        resultado = sentiment_analyzer(texto[:512])[0]  # resultado é dict com 'label' e 'score'
+        label = resultado.get('label', '')
+        score = resultado.get('score', 0.0)
+        
+        # Label deve ser do tipo '4 stars', por exemplo
+        match = re.match(r"(\d)\s+star", label)
+        if match:
+            estrelas = int(match.group(1))
+            sentimento = (
+                "Negativo" if estrelas <= 2 else
+                "Neutro" if estrelas == 3 else
+                "Positivo"
+            )
+            # Calcular número de tokens
+            tokens = tokenizer(texto, truncation=True, max_length=512, return_tensors=None)
             num_tokens = len(tokens['input_ids'][0])
-            resultado = sentiment_analyzer(texto[:512])[0]
-            sentimento = interpretar_estrela(resultado['label'])
-            return pd.Series([sentimento, resultado['score'], num_tokens])
-        except Exception:
+            return pd.Series([sentimento, float(score), num_tokens])
+        else:
             return pd.Series(["Erro", 0.0, 0])
+    
+    except Exception as e:
+        return pd.Series(["Erro", 0.0, 0])
 
     df[['sentimento', 'confianca', 'num_tokens']] = df['IDEIA'].astype(str).apply(analisar_sentimento_completo)
 
