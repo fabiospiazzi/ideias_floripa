@@ -100,9 +100,9 @@ def main():
                 # Calcular número de tokens
                 tokens = tokenizer(texto, truncation=True, max_length=512, return_tensors=None)
                 num_tokens = len(tokens['input_ids'][0])
-            return pd.Series([sentimento, float(score), num_tokens])
-        else:
-            return pd.Series(["Erro2", 0.0, 0])
+                return pd.Series([sentimento, float(score), num_tokens])
+            else:
+                return pd.Series(["Erro2", 0.0, 0])
     
         except Exception as e:
             return pd.Series(["Erro3", 0.0, 0])
