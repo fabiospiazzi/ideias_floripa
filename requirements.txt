@@ -4,7 +4,6 @@ streamlit_folium
 geopandas
 pandas
 plotly.express
-os
 matplotlib
 pyplot
 transformers
