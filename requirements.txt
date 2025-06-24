@@ -5,6 +5,9 @@ geopandas
 pandas
 plotly.express
 matplotlib
-pyplot
+re
+time
 transformers
 torch
+nominatim
+geopy
