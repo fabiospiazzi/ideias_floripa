@@ -1,7 +1,5 @@
 
 import pandas as pd
-import re
-import time
 import folium
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from geopy.geocoders import Nominatim
