@@ -1,4 +1,5 @@
 streamlit>=1.30
+streamlit-folium>=0.18
 transformers>=4.40
 torch>=2.0
 pandas>=2.0
