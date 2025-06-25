@@ -85,19 +85,36 @@ def main():
     st.set_page_config(page_title="Ideias para Florianópolis", layout="wide")
     st.title("💬 Mapa de Ideias e Sentimentos sobre Florianópolis")
 
-    # Inicializa session state para armazenar novas ideias
+    # Inicializa session state
     if 'novas_ideias' not in st.session_state:
         st.session_state.novas_ideias = pd.DataFrame(columns=['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro', 'latitude', 'longitude'])
+    if 'df_original' not in st.session_state:
+        st.session_state.df_original = pd.DataFrame()
 
     uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
-    df_original = carregar_dados(uploaded_file)
+    
+    # Carrega modelo apenas quando necessário
+    if uploaded_file is not None or not st.session_state.novas_ideias.empty:
+        sentiment_analyzer, tokenizer = carregar_modelo()
 
-    if 'IDEIA' not in df_original.columns:
-        st.error("O arquivo deve conter a coluna 'IDEIA'")
-        return
-
-    # Carrega modelo e tokenizer
-    sentiment_analyzer, tokenizer = carregar_modelo()
+    # Processa arquivo CSV quando carregado
+    if uploaded_file is not None:
+        with st.spinner("Processando arquivo CSV..."):
+            df_temp = carregar_dados(uploaded_file)
+            if 'IDEIA' not in df_temp.columns:
+                st.error("O arquivo deve conter a coluna 'IDEIA'")
+            else:
+                st.session_state.df_original = df_temp.copy()
+                st.session_state.df_original[['sentimento', 'confianca', 'num_tokens']] = (
+                    st.session_state.df_original['IDEIA'].astype(str).apply(
+                        lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer))
+                )
+                st.session_state.df_original['bairro'] = st.session_state.df_original['IDEIA'].astype(str).apply(extrair_bairro)
+                st.session_state.df_original[['latitude', 'longitude']] = (
+                    st.session_state.df_original['bairro'].apply(
+                        lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
+                )
+                st.success("Arquivo CSV processado com sucesso!")
 
     # Seção para adicionar nova ideia
     with st.expander("➕ Adicionar Nova Ideia", expanded=True):
@@ -106,13 +123,14 @@ def main():
             enviar = st.form_submit_button("Analisar Sentimento")
             
             if enviar and nova_ideia:
+                if 'sentiment_analyzer' not in locals():
+                    sentiment_analyzer, tokenizer = carregar_modelo()
+                
                 with st.spinner("Analisando nova ideia..."):
-                    # Analisa a nova ideia
                     sentimento, confianca, num_tokens = analisar_sentimento_completo(nova_ideia, sentiment_analyzer, tokenizer)
                     bairro = extrair_bairro(nova_ideia)
                     latitude, longitude = geocodificar_bairro(bairro) if bairro else (None, None)
                     
-                    # Adiciona à session state
                     nova_linha = pd.DataFrame([{
                         'IDEIA': nova_ideia,
                         'sentimento': sentimento,
@@ -127,42 +145,38 @@ def main():
                     st.success("Ideia adicionada com sucesso!")
                     st.balloons()
 
-    # Processa dados originais
-    if 'sentimento' not in df_original.columns:
-        df_original[['sentimento', 'confianca', 'num_tokens']] = df_original['IDEIA'].astype(str).apply(
-            lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer)))
-        
-        df_original['bairro'] = df_original['IDEIA'].astype(str).apply(extrair_bairro)
-        df_original[['latitude', 'longitude']] = df_original['bairro'].apply(
-            lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None]))
+    # Combina dados apenas para o mapa
+    df_completo = pd.concat([st.session_state.df_original, st.session_state.novas_ideias], ignore_index=True)
 
-    # Combina dados originais e novas ideias para o mapa
-    df_completo = pd.concat([df_original, st.session_state.novas_ideias], ignore_index=True)
-
-    # Mapa
-    mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
-    for _, row in df_completo.dropna(subset=['latitude', 'longitude']).iterrows():
-        cor = (
-            "green" if row['sentimento'] == "Positivo" else
-            "blue" if row['sentimento'] == "Neutro" else
-            "red"
-        )
-        folium.Marker(
-            location=[row['latitude'], row['longitude']],
-            popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
-            icon=folium.Icon(color=cor)
-        ).add_to(mapa)
-
-    st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
-    st_folium(mapa, width=1000, height=600)
+    # Mostra mapa se houver dados
+    if not df_completo.empty:
+        st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
+        mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
+        for _, row in df_completo.dropna(subset=['latitude', 'longitude']).iterrows():
+            cor = (
+                "green" if row['sentimento'] == "Positivo" else
+                "blue" if row['sentimento'] == "Neutro" else
+                "red"
+            )
+            folium.Marker(
+                location=[row['latitude'], row['longitude']],
+                popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
+                icon=folium.Icon(color=cor)
+            ).add_to(mapa)
+        st_folium(mapa, width=1000, height=600)
+    else:
+        st.info("Nenhum dado disponível para exibir o mapa. Carregue um arquivo CSV ou adicione uma nova ideia.")
 
     # Tabelas separadas
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("📊 Ideias Originais")
-        st.dataframe(df_original[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
-    
+        if not st.session_state.df_original.empty:
+            st.dataframe(st.session_state.df_original[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
+        else:
+            st.info("Nenhum arquivo CSV carregado ainda.")
+
     with col2:
         st.subheader("✨ Novas Ideias Adicionadas")
         if not st.session_state.novas_ideias.empty:
