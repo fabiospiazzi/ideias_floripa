@@ -1,4 +1,18 @@
 # app.py
+
+import os
+import sys
+from pathlib import Path
+
+# Configuração especial para Streamlit Cloud
+if 'STREAMLIT_CLOUD' in os.environ:
+    os.environ['TRANSFORMERS_CACHE'] = '/tmp/cache/'
+    os.environ['HF_HOME'] = '/tmp/cache/huggingface/'
+    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
+    
+    # Cria diretório de cache se não existir
+    Path('/tmp/cache').mkdir(exist_ok=True)
+
 import streamlit as st
 import pandas as pd
 import re
