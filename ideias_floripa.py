@@ -73,7 +73,7 @@ def analisar_sentimento_completo(texto, analyzer):
         resultado = analyzer(texto[:512])[0]  # Limita a 512 tokens
         label = resultado['label']
         score = resultado['score']
-        
+        print("analisando o modelo")
         # Mapeia labels para categorias (ajuste conforme seu modelo)
         sentimento = {
             'LABEL_0': 'Negativo',
