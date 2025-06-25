@@ -23,6 +23,10 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 import time
 
+pip install --upgrade pip setuptools wheel
+pip cache purge
+pip install -r requirements.txt --user
+
 # Função para carregar CSV
 @st.cache_data
 def carregar_dados(uploaded_file=None):
