@@ -77,6 +77,7 @@ def main():
     def analisar_sentimento_completo(texto):
         try:
             # Limita o texto a 512 tokens (limitação do BERT)
+            print("Analisando o Sentimento")
             resultado = sentiment_analyzer(texto[:512])[0]
             label = resultado.get('label', '')
             score = resultado.get('score', 0.0)
