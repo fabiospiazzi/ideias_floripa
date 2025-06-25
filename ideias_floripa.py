@@ -57,36 +57,13 @@ def carregar_modelo():
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     return pipeline("sentiment-analysis", model=model, tokenizer=tokenizer), tokenizer
 
-# Função para adicionar nova ideia
-def adicionar_ideia(df, nova_ideia, sentiment_analyzer, tokenizer):
-    # Analisa o sentimento da nova ideia
-    resultado = analisar_sentimento_completo(nova_ideia, sentiment_analyzer, tokenizer)
-    
-    # Cria um novo DataFrame com a nova ideia
-    novo_df = pd.DataFrame({
-        'IDEIA': [nova_ideia],
-        'sentimento': [resultado[0]],
-        'confianca': [resultado[1]],
-        'num_tokens': [resultado[2]]
-    })
-    
-    # Extrai bairro e coordenadas
-    novo_df['bairro'] = novo_df['IDEIA'].astype(str).apply(extrair_bairro)
-    novo_df[['latitude', 'longitude']] = novo_df['bairro'].apply(
-        lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
-    )
-    
-    # Concatena com o DataFrame original
-    return pd.concat([df, novo_df], ignore_index=True)
-
+# Função para analisar sentimento
 def analisar_sentimento_completo(texto, sentiment_analyzer, tokenizer):
     try:
-        # Limita o texto a 512 tokens (limitação do BERT)
         resultado = sentiment_analyzer(texto[:512])[0]
         label = resultado.get('label', '')
         score = resultado.get('score', 0.0)
         
-        # Converte rótulo de estrelas para sentimento
         match = re.match(r"(\d)\s*stars?", label, re.IGNORECASE)
         if match:
             estrelas = int(match.group(1))
@@ -95,16 +72,12 @@ def analisar_sentimento_completo(texto, sentiment_analyzer, tokenizer):
                 "Neutro" if estrelas == 3 else
                 "Positivo"
             )
-            # Conta tokens
             tokens = tokenizer(texto, truncation=True, max_length=512, return_tensors="pt")
             num_tokens = tokens['input_ids'].shape[1]
-            return (sentimento, float(score), num_tokens)
+            return sentimento, float(score), num_tokens
         else:
-            st.warning(f"Formato de label inesperado: {label}")
             return ("Indefinido", 0.0, 0)
-    
     except Exception as e:
-        st.error(f"Erro ao analisar sentimento: {str(e)}")
         return ("Erro", 0.0, 0)
 
 # App principal
@@ -112,14 +85,18 @@ def main():
     st.set_page_config(page_title="Ideias para Florianópolis", layout="wide")
     st.title("💬 Mapa de Ideias e Sentimentos sobre Florianópolis")
 
-    uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
-    df = carregar_dados(uploaded_file)
+    # Inicializa session state para armazenar novas ideias
+    if 'novas_ideias' not in st.session_state:
+        st.session_state.novas_ideias = pd.DataFrame(columns=['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro', 'latitude', 'longitude'])
 
-    if 'IDEIA' not in df.columns:
+    uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
+    df_original = carregar_dados(uploaded_file)
+
+    if 'IDEIA' not in df_original.columns:
         st.error("O arquivo deve conter a coluna 'IDEIA'")
         return
 
-    # Carrega modelo e tokenizer juntos
+    # Carrega modelo e tokenizer
     sentiment_analyzer, tokenizer = carregar_modelo()
 
     # Seção para adicionar nova ideia
@@ -130,26 +107,41 @@ def main():
             
             if enviar and nova_ideia:
                 with st.spinner("Analisando nova ideia..."):
-                    df = adicionar_ideia(df, nova_ideia, sentiment_analyzer, tokenizer)
+                    # Analisa a nova ideia
+                    sentimento, confianca, num_tokens = analisar_sentimento_completo(nova_ideia, sentiment_analyzer, tokenizer)
+                    bairro = extrair_bairro(nova_ideia)
+                    latitude, longitude = geocodificar_bairro(bairro) if bairro else (None, None)
+                    
+                    # Adiciona à session state
+                    nova_linha = pd.DataFrame([{
+                        'IDEIA': nova_ideia,
+                        'sentimento': sentimento,
+                        'confianca': confianca,
+                        'num_tokens': num_tokens,
+                        'bairro': bairro,
+                        'latitude': latitude,
+                        'longitude': longitude
+                    }])
+                    
+                    st.session_state.novas_ideias = pd.concat([st.session_state.novas_ideias, nova_linha], ignore_index=True)
                     st.success("Ideia adicionada com sucesso!")
                     st.balloons()
 
-    st.info("Analisando sentimentos... Aguarde.")
-    
-    # Aplica a análise de sentimento para todas as ideias
-    if 'sentimento' not in df.columns:
-        df[['sentimento', 'confianca', 'num_tokens']] = df['IDEIA'].astype(str).apply(
+    # Processa dados originais
+    if 'sentimento' not in df_original.columns:
+        df_original[['sentimento', 'confianca', 'num_tokens']] = df_original['IDEIA'].astype(str).apply(
             lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer)))
         
-        # Extrai bairros e coordenadas
-        df['bairro'] = df['IDEIA'].astype(str).apply(extrair_bairro)
-        df[['latitude', 'longitude']] = df['bairro'].apply(
-            lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
-        )
+        df_original['bairro'] = df_original['IDEIA'].astype(str).apply(extrair_bairro)
+        df_original[['latitude', 'longitude']] = df_original['bairro'].apply(
+            lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None]))
+
+    # Combina dados originais e novas ideias para o mapa
+    df_completo = pd.concat([df_original, st.session_state.novas_ideias], ignore_index=True)
 
     # Mapa
     mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
-    for _, row in df.dropna(subset=['latitude', 'longitude']).iterrows():
+    for _, row in df_completo.dropna(subset=['latitude', 'longitude']).iterrows():
         cor = (
             "green" if row['sentimento'] == "Positivo" else
             "blue" if row['sentimento'] == "Neutro" else
@@ -164,8 +156,19 @@ def main():
     st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
     st_folium(mapa, width=1000, height=600)
 
-    st.subheader("📊 Tabela de Sentimentos")
-    st.dataframe(df[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
+    # Tabelas separadas
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 Ideias Originais")
+        st.dataframe(df_original[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
+    
+    with col2:
+        st.subheader("✨ Novas Ideias Adicionadas")
+        if not st.session_state.novas_ideias.empty:
+            st.dataframe(st.session_state.novas_ideias[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
+        else:
+            st.info("Nenhuma nova ideia adicionada ainda.")
 
 if __name__ == '__main__':
     main()
