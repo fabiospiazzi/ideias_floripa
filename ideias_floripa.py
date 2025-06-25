@@ -1,40 +1,18 @@
 # app.py
 
-import sys
-import subprocess
-
-try:
-    import sentencepiece
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--pre", "sentencepiece"])
-    import sentencepiece
-
-import os
-import sys
-from pathlib import Path
-
-# Configuração especial para Streamlit Cloud
-if 'STREAMLIT_CLOUD' in os.environ:
-    os.environ['TRANSFORMERS_CACHE'] = '/tmp/cache/'
-    os.environ['HF_HOME'] = '/tmp/cache/huggingface/'
-    os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:128'
-    
-    # Cria diretório de cache se não existir
-    Path('/tmp/cache').mkdir(exist_ok=True)
-
 import streamlit as st
 import pandas as pd
 import re
 import folium
 from streamlit_folium import st_folium
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from transformers import BertTokenizerFast, AutoModelForSequenceClassification, pipeline
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 import time
 
-pip install --upgrade pip setuptools wheel
-pip cache purge
-pip install -r requirements.txt --user
+# Configuração inicial para evitar problemas no Streamlit Cloud
+if 'STREAMLIT_CLOUD' in os.environ:
+    os.environ['TRANSFORMERS_CACHE'] = '/tmp/cache/'
 
 # Função para carregar CSV
 @st.cache_data
@@ -75,44 +53,42 @@ def geocodificar_bairro(bairro):
         return geocodificar_bairro(bairro)
     return (None, None)
 
-# Carrega modelo BERTimbau para análise de sentimentos (não usa estrelas)
+# Carrega modelo BERTimbau sem sentencepiece
 @st.cache_resource
 def carregar_modelo():
     model_name = "neuralmind/bert-base-portuguese-cased"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
     
-    # Carrega um modelo fine-tuned para sentimentos em português
+    # Tokenizer alternativo que não usa sentencepiece
+    tokenizer = BertTokenizerFast.from_pretrained(model_name)
+    
+    # Modelo para classificação (substitua por um fine-tuned se disponível)
     model = AutoModelForSequenceClassification.from_pretrained(
-        "ricardo-filho/bert-base-portuguese-cased-sentiment",  # Substitua por um modelo adequado se necessário
+        model_name,
         num_labels=3  # Negativo, Neutro, Positivo
     )
     
     return pipeline(
         "text-classification",
         model=model,
-        tokenizer=tokenizer,
-        function_to_apply="softmax"
+        tokenizer=tokenizer
     )
 
-# Função de análise de sentimento adaptada (sem estrelas)
-def analisar_sentimento_completo(texto, analyzer):
+# Função de análise adaptada
+def analisar_sentimento(texto, analyzer):
     try:
         resultado = analyzer(texto[:512])[0]  # Limita a 512 tokens
-        label = resultado['label']
-        score = resultado['score']
-        print("analisando o modelo")
-        # Mapeia labels para categorias (ajuste conforme seu modelo)
+        # Mapeia saídas para sentimentos (ajuste conforme seu modelo)
         sentimento = {
             'LABEL_0': 'Negativo',
             'LABEL_1': 'Neutro',
             'LABEL_2': 'Positivo'
-        }.get(label, 'Neutro')
+        }.get(resultado['label'], 'Neutro')
         
-        return pd.Series([sentimento, float(score), len(texto.split())])
+        return sentimento, resultado['score'], len(texto.split())
     
     except Exception as e:
-        st.error(f"Erro ao analisar: {str(e)}")
-        return pd.Series(["Erro", 0.0, 0])
+        st.error(f"Erro na análise: {str(e)}")
+        return "Erro", 0.0, 0
 
 # App principal
 def main():
@@ -131,11 +107,16 @@ def main():
     # Carrega o modelo
     sentiment_analyzer = carregar_modelo()
     
-    # Aplica a análise (usando partial para passar o analyzer)
-    from functools import partial
-    analyze_fn = partial(analisar_sentimento_completo, analyzer=sentiment_analyzer)
-    
-    df[['sentimento', 'confianca', 'num_palavras']] = df['IDEIA'].astype(str).apply(analyze_fn)
+    # Processamento em lote para melhor performance
+    if not df.empty:
+        results = []
+        for texto in df['IDEIA'].astype(str):
+            results.append(analisar_sentimento(texto, analyzer))
+        
+        df[['sentimento', 'confianca', 'num_palavras']] = pd.DataFrame(
+            results,
+            index=df.index
+        )
 
     # Extrai bairros e coordenadas
     df['bairro'] = df['IDEIA'].astype(str).apply(extrair_bairro)
