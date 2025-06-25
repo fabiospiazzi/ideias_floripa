@@ -1,11 +1,9 @@
-streamlit
-pandas
-numpy
-folium
-streamlit-folium
-geopy
-transformers
-torch
-protobuf
-sentencepiece
-
+streamlit==1.32.2
+pandas==2.1.4
+numpy==1.26.3
+folium==0.14.0
+streamlit-folium==0.15.1
+geopy==2.4.1
+transformers==4.36.2
+torch==2.1.2 --extra-index-url https://download.pytorch.org/whl/cpu
+protobuf==3.20.3
