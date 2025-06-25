@@ -1,5 +1,29 @@
 # app.py
 
+import os
+import sys
+import subprocess
+
+# Verifica e instala dependências essenciais
+try:
+    import torch
+except ImportError:
+    subprocess.check_call([
+        sys.executable, 
+        "-m", 
+        "pip", 
+        "install", 
+        "torch==2.3.0", 
+        "--index-url", 
+        "https://download.pytorch.org/whl/cpu"
+    ])
+
+# Configuração especial para ambientes cloud
+if 'STREAMLIT_CLOUD' in os.environ:
+    os.environ['PYTHON_VERSION'] = '3.10'
+    os.environ['PIP_VERSION'] = '24.0'
+
+
 import streamlit as st
 import pandas as pd
 import re
