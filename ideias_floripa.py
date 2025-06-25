@@ -108,12 +108,12 @@ def main():
                 st.session_state.df_original[['sentimento', 'confianca', 'num_tokens']] = (
                     st.session_state.df_original['IDEIA'].astype(str).apply(
                         lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer))
-                )
+                ))
                 st.session_state.df_original['bairro'] = st.session_state.df_original['IDEIA'].astype(str).apply(extrair_bairro)
                 st.session_state.df_original[['latitude', 'longitude']] = (
                     st.session_state.df_original['bairro'].apply(
                         lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
-                )
+                ))
                 st.success("Arquivo CSV processado com sucesso!")
 
     # Seção para adicionar nova ideia
