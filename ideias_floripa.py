@@ -56,7 +56,7 @@ def carregar_modelo():
     
     # Carrega um modelo fine-tuned para sentimentos em português
     model = AutoModelForSequenceClassification.from_pretrained(
-        "portuguese-sentiment-analysis",  # Substitua por um modelo adequado se necessário
+        "ricardo-filho/bert-base-portuguese-cased-sentiment",  # Substitua por um modelo adequado se necessário
         num_labels=3  # Negativo, Neutro, Positivo
     )
     
