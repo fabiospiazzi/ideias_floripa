@@ -1,5 +1,14 @@
 # app.py
 
+import sys
+import subprocess
+
+try:
+    import sentencepiece
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--pre", "sentencepiece"])
+    import sentencepiece
+
 import os
 import sys
 from pathlib import Path
