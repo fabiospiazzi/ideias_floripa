@@ -139,7 +139,7 @@ def main():
     # Aplica a análise de sentimento para todas as ideias
     if 'sentimento' not in df.columns:
         df[['sentimento', 'confianca', 'num_tokens']] = df['IDEIA'].astype(str).apply(
-            lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer))
+            lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer)))
         
         # Extrai bairros e coordenadas
         df['bairro'] = df['IDEIA'].astype(str).apply(extrair_bairro)
