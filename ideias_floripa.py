@@ -49,16 +49,13 @@ def geocodificar_bairro(bairro):
         return geocodificar_bairro(bairro)
     return (None, None)
 
-# Carrega modelo
+# Carrega modelo e tokenizer
 @st.cache_resource
 def carregar_modelo():
-    print("Carregando o modelo")
     model_name = "nlptown/bert-base-multilingual-uncased-sentiment"
-    print("Tokenizando...")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    print("Jogando o modelo pré-treinado para o model")
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    return pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+    return pipeline("sentiment-analysis", model=model, tokenizer=tokenizer), tokenizer
 
 # App principal
 def main():
@@ -73,20 +70,19 @@ def main():
         return
 
     st.info("Analisando sentimentos... Aguarde.")
-
-    sentiment_analyzer = carregar_modelo()
+    
+    # Carrega modelo e tokenizer juntos
+    sentiment_analyzer, tokenizer = carregar_modelo()
 
     def analisar_sentimento_completo(texto):
         try:
-            print("Chamando o resultado")
-            resultado = sentiment_analyzer(texto[:512])[0]  # resultado é dict com 'label' e 'score'
+            # Limita o texto a 512 tokens (limitação do BERT)
+            resultado = sentiment_analyzer(texto[:512])[0]
             label = resultado.get('label', '')
-            print("Label", label)
             score = resultado.get('score', 0.0)
-            print("Score", score)
-        
-            # Label deve ser do tipo '4 stars', por exemplo
-            match = re.match(r"(\d)\s+star", label)
+            
+            # Converte rótulo de estrelas para sentimento
+            match = re.match(r"(\d)\s*stars?", label, re.IGNORECASE)
             if match:
                 estrelas = int(match.group(1))
                 sentimento = (
@@ -94,18 +90,22 @@ def main():
                     "Neutro" if estrelas == 3 else
                     "Positivo"
                 )
-                # Calcular número de tokens
-                tokens = tokenizer(texto, truncation=True, max_length=512, return_tensors=None)
-                num_tokens = len(tokens['input_ids'][0])
+                # Conta tokens (opcional - pode ser removido se não for essencial)
+                tokens = tokenizer(texto, truncation=True, max_length=512, return_tensors="pt")
+                num_tokens = tokens['input_ids'].shape[1]
                 return pd.Series([sentimento, float(score), num_tokens])
             else:
-                return pd.Series(["Erro2", 0.0, 0])
-    
+                st.warning(f"Formato de label inesperado: {label}")
+                return pd.Series(["Indefinido", 0.0, 0])
+        
         except Exception as e:
-            return pd.Series(["Erro3", 0.0, 0])
+            st.error(f"Erro ao analisar sentimento: {str(e)}")
+            return pd.Series(["Erro", 0.0, 0])
 
+    # Aplica a análise de sentimento
     df[['sentimento', 'confianca', 'num_tokens']] = df['IDEIA'].astype(str).apply(analisar_sentimento_completo)
 
+    # Extrai bairros e coordenadas
     df['bairro'] = df['IDEIA'].astype(str).apply(extrair_bairro)
     df[['latitude', 'longitude']] = df['bairro'].apply(
         lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
@@ -114,7 +114,11 @@ def main():
     # Mapa
     mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
     for _, row in df.dropna(subset=['latitude', 'longitude']).iterrows():
-        cor = "green" if row['sentimento'] == "Positivo" else "gray" if row['sentimento'] == "Neutro" else "red"
+        cor = (
+            "green" if row['sentimento'] == "Positivo" else
+            "blue" if row['sentimento'] == "Neutro" else
+            "red"
+        )
         folium.Marker(
             location=[row['latitude'], row['longitude']],
             popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
