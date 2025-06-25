@@ -16,8 +16,9 @@ def carregar_dados(uploaded_file=None):
     if uploaded_file is not None:
         return pd.read_csv(uploaded_file)
     else:
-        url = "https://raw.githubusercontent.com/fabiospiazzi/ideias_floripa/main/dados_ideias_floripa.csv"
-        return pd.read_csv(url)
+        st.info("Nenhum arquivo CSV carregado ainda.")
+        #url = "https://raw.githubusercontent.com/fabiospiazzi/ideias_floripa/main/dados_ideias_floripa.csv"
+        #return pd.read_csv(url)
 
 # Lista fixa de bairros
 bairros_floripa = [
@@ -119,7 +120,7 @@ def main():
     # Seção para adicionar nova ideia
     with st.expander("➕ Adicionar Nova Ideia", expanded=True):
         with st.form("nova_ideia_form"):
-            nova_ideia = st.text_area("Digite sua ideia sobre Florianópolis:", height=150)
+            nova_ideia = st.text_area("Digite sua ideia, sugestão ou crítica sobre Florianópolis:", height=150)
             enviar = st.form_submit_button("Analisar Sentimento")
             
             if enviar and nova_ideia:
