@@ -5,7 +5,7 @@ folium>=0.14.0
 streamlit-folium>=0.15.0
 geopy>=2.4.0
 transformers==4.36.2
-torch==2.1.2 --extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.1.2 --extra-index-url https://download.pytorch.org/whl/cpu
 sentencepiece==0.2.0
 protobuf==3.20.3
 accelerate>=0.27.0
