@@ -1,6 +1,152 @@
 # app.py
-
 import streamlit as st
+import pandas as pd
+import re
+import folium
+from streamlit_folium import st_folium
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
+import time
+
+# Função para carregar CSV
+@st.cache_data
+def carregar_dados(uploaded_file=None):
+    if uploaded_file is not None:
+        return pd.read_csv(uploaded_file)
+    else:
+        url = "https://raw.githubusercontent.com/fabiospiazzi/ideias_floripa/main/dados_ideias_floripa.csv"
+        return pd.read_csv(url)
+
+# Lista de bairros (mantida igual)
+bairros_floripa = [
+    "Centro", "Trindade", "Ingleses do Rio Vermelho", "Canasvieiras", "Rio Tavares",
+    "Estreito", "Agronômica", "Capoeiras", "Itacorubi", "Campeche", "Córrego Grande",
+    "Jurerê", "Costeira do Pirajubaé", "Lagoa da Conceição", "Saco dos Limões", "Pantanal",
+    "Santa Mônica", "João Paulo", "Abraão", "Carianos", "Monte Verde", "Coqueiros",
+    "Barra da Lagoa", "Tapera", "Ribeirão da Ilha", "Sambaqui", "Armação", "Ratones"
+]
+
+def extrair_bairro(texto):
+    texto_lower = texto.lower()
+    for bairro in bairros_floripa:
+        if re.search(rf"\b{re.escape(bairro.lower())}\b", texto_lower):
+            return bairro
+    return None
+
+# Geolocalizador
+geolocator = Nominatim(user_agent="floripa-sentimento-streamlit")
+
+@st.cache_data
+def geocodificar_bairro(bairro):
+    try:
+        local = geolocator.geocode(f"{bairro}, Florianópolis, SC, Brasil")
+        if local:
+            return (local.latitude, local.longitude)
+    except GeocoderTimedOut:
+        time.sleep(1)
+        return geocodificar_bairro(bairro)
+    return (None, None)
+
+# Carrega modelo BERTimbau para análise de sentimentos (não usa estrelas)
+@st.cache_resource
+def carregar_modelo():
+    model_name = "neuralmind/bert-base-portuguese-cased"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    
+    # Carrega um modelo fine-tuned para sentimentos em português
+    model = AutoModelForSequenceClassification.from_pretrained(
+        "portuguese-sentiment-analysis",  # Substitua por um modelo adequado se necessário
+        num_labels=3  # Negativo, Neutro, Positivo
+    )
+    
+    return pipeline(
+        "text-classification",
+        model=model,
+        tokenizer=tokenizer,
+        function_to_apply="softmax"
+    )
+
+# Função de análise de sentimento adaptada (sem estrelas)
+def analisar_sentimento_completo(texto, analyzer):
+    try:
+        resultado = analyzer(texto[:512])[0]  # Limita a 512 tokens
+        label = resultado['label']
+        score = resultado['score']
+        
+        # Mapeia labels para categorias (ajuste conforme seu modelo)
+        sentimento = {
+            'LABEL_0': 'Negativo',
+            'LABEL_1': 'Neutro',
+            'LABEL_2': 'Positivo'
+        }.get(label, 'Neutro')
+        
+        return pd.Series([sentimento, float(score), len(texto.split())])
+    
+    except Exception as e:
+        st.error(f"Erro ao analisar: {str(e)}")
+        return pd.Series(["Erro", 0.0, 0])
+
+# App principal
+def main():
+    st.set_page_config(page_title="Ideias para Florianópolis", layout="wide")
+    st.title("💬 Mapa de Ideias e Sentimentos sobre Florianópolis (BERTimbau)")
+
+    uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
+    df = carregar_dados(uploaded_file)
+
+    if 'IDEIA' not in df.columns:
+        st.error("O arquivo deve conter a coluna 'IDEIA'")
+        return
+
+    st.info("Analisando sentimentos com BERTimbau... Aguarde.")
+    
+    # Carrega o modelo
+    sentiment_analyzer = carregar_modelo()
+    
+    # Aplica a análise (usando partial para passar o analyzer)
+    from functools import partial
+    analyze_fn = partial(analisar_sentimento_completo, analyzer=sentiment_analyzer)
+    
+    df[['sentimento', 'confianca', 'num_palavras']] = df['IDEIA'].astype(str).apply(analyze_fn)
+
+    # Extrai bairros e coordenadas
+    df['bairro'] = df['IDEIA'].astype(str).apply(extrair_bairro)
+    df[['latitude', 'longitude']] = df['bairro'].apply(
+        lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
+    )
+
+    # Mapa
+    mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
+    for _, row in df.dropna(subset=['latitude', 'longitude']).iterrows():
+        cor = (
+            "green" if row['sentimento'] == "Positivo" else
+            "blue" if row['sentimento'] == "Neutro" else
+            "red"
+        )
+        folium.Marker(
+            location=[row['latitude'], row['longitude']],
+            popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
+            icon=folium.Icon(color=cor)
+        ).add_to(mapa)
+
+    st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
+    st_folium(mapa, width=1000, height=600)
+
+    st.subheader("📊 Tabela de Sentimentos")
+    st.dataframe(df[['IDEIA', 'sentimento', 'confianca', 'num_palavras', 'bairro']])
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+
+
+"""import streamlit as st
 import pandas as pd
 import re
 import folium
@@ -134,3 +280,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+"""
