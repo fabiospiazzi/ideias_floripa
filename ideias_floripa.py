@@ -141,7 +141,7 @@ def main():
             )
             col1, col2 = st.columns([4, 1])
             with col2:
-                enviar = st.form_submit_button("Enviar para Análise")
+                enviar = st.form_submit_button("📨Enviar para Análise")
             with col1:
                 if st.form_submit_button("Limpar Texto"):
                     st.session_state.texto_ideia = " "
