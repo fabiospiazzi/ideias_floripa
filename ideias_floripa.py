@@ -109,7 +109,7 @@ def main():
 
     # Botão de processamento
     if uploaded_file is not None and not st.session_state.arquivo_carregado:
-        if st.button("🔍 Processar Arquivo", type="primary"):
+        if st.button("⚙️Processar Arquivo", type="primary"):
             with st.spinner('Processando arquivo CSV...'):
                 df_temp = carregar_dados(uploaded_file)
                 if 'IDEIA' in df_temp.columns:
@@ -140,9 +140,9 @@ def main():
                 key="input_ideia"
             )
             col1, col2 = st.columns([4, 1])
-            with col1:
-                enviar = st.form_submit_button("Enviar para Análise")
             with col2:
+                enviar = st.form_submit_button("Enviar para Análise")
+            with col1:
                 if st.form_submit_button("Limpar Texto"):
                     st.session_state.texto_ideia = " "
                     st.rerun()
