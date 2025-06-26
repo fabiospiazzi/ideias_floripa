@@ -102,10 +102,21 @@ def main():
         st.session_state.df_original = pd.DataFrame()
 
     uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
+
+    if uploaded_file is not None and st.session_state.dados_processados is not None:
+        col1, col2 = st.columns([4, 1])
+        with col2:
+            if st.button("↻ Reprocessar Arquivo", 
+                       help="Clique para processar novamente o arquivo CSV",
+                       type="primary"):
+                st.session_state.dados_processados = None
+                st.session_state.novas_ideias = pd.DataFrame()
+                st.rerun()
+
     
     # Carrega modelo apenas quando necessário
-    if uploaded_file is not None or not st.session_state.novas_ideias.empty:
-        sentiment_analyzer, tokenizer = carregar_modelo()
+   # if uploaded_file is not None or not st.session_state.novas_ideias.empty:
+       # sentiment_analyzer, tokenizer = carregar_modelo()
 
     # Processamento do CSV (apenas na primeira carga)
     if uploaded_file is not None and st.session_state.dados_processados is None:
@@ -181,12 +192,7 @@ def main():
     else:
         st.info("Nenhum dado disponível para exibir o mapa. Carregue um arquivo CSV ou adicione uma nova ideia.")
 
-    if uploaded_file is not None:
-        if st.button("Processar Arquivo"):
-            st.session_state.dados_processados = None  # Reseta para reprocessar
-            st.experimental_rerun()
-
-    
+       
     # Tabelas separadas
     col1, col2 = st.columns(2)
     
