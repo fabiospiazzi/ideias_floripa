@@ -95,14 +95,19 @@ def main():
     st.set_page_config(page_title="Ideias para Florianópolis", layout="wide")
     st.title("💬 Mapa de Ideias e Sentimentos sobre Florianópolis")
 
-    # Inicializa session state
+    # Inicializa session state de forma consistente
     if 'novas_ideias' not in st.session_state:
         st.session_state.novas_ideias = pd.DataFrame(columns=['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro', 'latitude', 'longitude'])
-    if 'df_original' not in st.session_state:
-        st.session_state.df_original = pd.DataFrame()
+    if 'dados_processados' not in st.session_state:
+        st.session_state.dados_processados = None
+    if 'analyzer' not in st.session_state:
+        st.session_state.analyzer = None
+    if 'tokenizer' not in st.session_state:
+        st.session_state.tokenizer = None
 
     uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
 
+    # Botão de reprocessamento (aparece apenas quando há dados processados)
     if uploaded_file is not None and st.session_state.dados_processados is not None:
         col1, col2 = st.columns([4, 1])
         with col2:
@@ -110,31 +115,27 @@ def main():
                        help="Clique para processar novamente o arquivo CSV",
                        type="primary"):
                 st.session_state.dados_processados = None
-                st.session_state.novas_ideias = pd.DataFrame()
+                st.session_state.novas_ideias = pd.DataFrame(columns=['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro', 'latitude', 'longitude'])
                 st.rerun()
 
-    
-    # Carrega modelo apenas quando necessário
-   # if uploaded_file is not None or not st.session_state.novas_ideias.empty:
-       # sentiment_analyzer, tokenizer = carregar_modelo()
-
-    # Processamento do CSV (apenas na primeira carga)
+    # Processamento do CSV (apenas na primeira carga ou após reset)
     if uploaded_file is not None and st.session_state.dados_processados is None:
         with st.spinner('Processando arquivo CSV...'):
             df_temp = carregar_dados(uploaded_file)
             if 'IDEIA' in df_temp.columns:
-                sentiment_analyzer, tokenizer = carregar_modelo()
+                # Carrega modelo apenas se necessário
+                if st.session_state.analyzer is None:
+                    st.session_state.analyzer, st.session_state.tokenizer = carregar_modelo()
                 
+                # Processa os dados
                 df_temp[['sentimento', 'confianca', 'num_tokens']] = df_temp['IDEIA'].astype(str).apply(
-                    lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer)))
+                    lambda x: pd.Series(analisar_sentimento_completo(x, st.session_state.analyzer, st.session_state.tokenizer)))
                 
                 df_temp['bairro'] = df_temp['IDEIA'].astype(str).apply(extrair_bairro)
                 df_temp[['latitude', 'longitude']] = df_temp['bairro'].apply(
                     lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None]))
                 
                 st.session_state.dados_processados = df_temp
-                st.session_state.analyzer = sentiment_analyzer
-                st.session_state.tokenizer = tokenizer
                 st.success("Dados processados com sucesso!")
             else:
                 st.error("O arquivo deve conter a coluna 'IDEIA'")
@@ -146,11 +147,13 @@ def main():
             enviar = st.form_submit_button("Analisar Sentimento")
             
             if enviar and nova_ideia:
-                if 'sentiment_analyzer' not in locals():
-                    sentiment_analyzer, tokenizer = carregar_modelo()
+                # Garante que o modelo está carregado
+                if st.session_state.analyzer is None:
+                    st.session_state.analyzer, st.session_state.tokenizer = carregar_modelo()
                 
                 with st.spinner("Analisando nova ideia..."):
-                    sentimento, confianca, num_tokens = analisar_sentimento_completo(nova_ideia, sentiment_analyzer, tokenizer)
+                    sentimento, confianca, num_tokens = analisar_sentimento_completo(
+                        nova_ideia, st.session_state.analyzer, st.session_state.tokenizer)
                     bairro = extrair_bairro(nova_ideia)
                     latitude, longitude = geocodificar_bairro(bairro) if bairro else (None, None)
                     
@@ -164,7 +167,10 @@ def main():
                         'longitude': longitude
                     }])
                     
-                    st.session_state.novas_ideias = pd.concat([st.session_state.novas_ideias, nova_linha], ignore_index=True)
+                    st.session_state.novas_ideias = pd.concat(
+                        [st.session_state.novas_ideias, nova_linha], 
+                        ignore_index=True
+                    )
                     st.success("Ideia adicionada com sucesso!")
                     st.balloons()
 
@@ -188,18 +194,17 @@ def main():
                 popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
                 icon=folium.Icon(color=cor)
             ).add_to(mapa)
-        st_folium(mapa, width=1000, height=600, key="mapa")  # Adicione um key único
+        st_folium(mapa, width=1000, height=600, key="mapa")
     else:
         st.info("Nenhum dado disponível para exibir o mapa. Carregue um arquivo CSV ou adicione uma nova ideia.")
 
-       
     # Tabelas separadas
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("📊 Ideias do Arquivo CSV")
-        if not st.session_state.df_original.empty:
-            st.dataframe(st.session_state.df_original[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
+        if st.session_state.dados_processados is not None:
+            st.dataframe(st.session_state.dados_processados[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
         else:
             st.info("Nenhum arquivo CSV carregado ainda.")
 
