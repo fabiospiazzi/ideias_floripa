@@ -172,7 +172,7 @@ def main():
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("📊 Ideias Originais")
+        st.subheader("📊 Ideias do Arquivo CSV")
         if not st.session_state.df_original.empty:
             st.dataframe(st.session_state.df_original[['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro']])
         else:
