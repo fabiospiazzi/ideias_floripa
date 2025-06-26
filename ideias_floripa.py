@@ -102,10 +102,12 @@ def main():
         st.session_state.novas_ideias = pd.DataFrame(columns=['IDEIA', 'sentimento', 'confianca', 'num_tokens', 'bairro', 'latitude', 'longitude'])
     if 'arquivo_carregado' not in st.session_state:
         st.session_state.arquivo_carregado = False
+    if 'texto_ideia' not in st.session_state:
+        st.session_state.texto_ideia = ""
 
     uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"])
 
-    # Botão de processamento (só aparece após upload)
+    # Botão de processamento
     if uploaded_file is not None and not st.session_state.arquivo_carregado:
         if st.button("🔍 Processar Arquivo", type="primary"):
             with st.spinner('Processando arquivo CSV...'):
@@ -128,6 +130,51 @@ def main():
                 else:
                     st.error("O arquivo deve conter a coluna 'IDEIA'")
 
+    # Seção para adicionar nova ideia (sempre visível)
+    with st.expander("➕ Adicionar Nova Ideia", expanded=True):
+        with st.form("nova_ideia_form"):
+            nova_ideia = st.text_area(
+                "Digite sua ideia sobre Florianópolis:",
+                height=150,
+                value=st.session_state.texto_ideia,
+                key="input_ideia"
+            )
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                enviar = st.form_submit_button("Analisar Sentimento")
+            with col2:
+                if st.form_submit_button("Limpar Texto"):
+                    st.session_state.texto_ideia = ""
+                    st.rerun()
+            
+            if enviar and nova_ideia:
+                if 'analyzer' not in st.session_state or st.session_state.analyzer is None:
+                    st.session_state.analyzer, st.session_state.tokenizer = carregar_modelo()
+                
+                with st.spinner("Analisando nova ideia..."):
+                    sentimento, confianca, num_tokens = analisar_sentimento_completo(
+                        nova_ideia, st.session_state.analyzer, st.session_state.tokenizer)
+                    bairro = extrair_bairro(nova_ideia)
+                    latitude, longitude = geocodificar_bairro(bairro) if bairro else (None, None)
+                    
+                    nova_linha = pd.DataFrame([{
+                        'IDEIA': nova_ideia,
+                        'sentimento': sentimento,
+                        'confianca': confianca,
+                        'num_tokens': num_tokens,
+                        'bairro': bairro,
+                        'latitude': latitude,
+                        'longitude': longitude
+                    }])
+                    
+                    st.session_state.novas_ideias = pd.concat(
+                        [st.session_state.novas_ideias, nova_linha], 
+                        ignore_index=True
+                    )
+                    st.session_state.texto_ideia = ""  # Limpa o texto após adicionar
+                    st.success("Ideia adicionada com sucesso!")
+                    #st.balloons()
+
     # Botão para limpar todos os dados
     if st.session_state.dados_processados is not None or not st.session_state.novas_ideias.empty:
         if st.button("🧹 Limpar Todos os Dados", type="secondary"):
@@ -136,42 +183,9 @@ def main():
             st.session_state.arquivo_carregado = False
             st.session_state.analyzer = None
             st.session_state.tokenizer = None
+            st.session_state.texto_ideia = ""
             st.rerun()
             st.success("Todos os dados foram removidos!")
-
-    # Seção para adicionar nova ideia (só aparece se houver dados processados ou novas ideias)
-    if st.session_state.dados_processados is not None or not st.session_state.novas_ideias.empty:
-        with st.expander("➕ Adicionar Nova Ideia", expanded=True):
-            with st.form("nova_ideia_form"):
-                nova_ideia = st.text_area("Digite sua ideia sobre Florianópolis:", height=150)
-                enviar = st.form_submit_button("Analisar Sentimento")
-                
-                if enviar and nova_ideia:
-                    if 'analyzer' not in st.session_state:
-                        st.session_state.analyzer, st.session_state.tokenizer = carregar_modelo()
-                    
-                    with st.spinner("Analisando nova ideia..."):
-                        sentimento, confianca, num_tokens = analisar_sentimento_completo(
-                            nova_ideia, st.session_state.analyzer, st.session_state.tokenizer)
-                        bairro = extrair_bairro(nova_ideia)
-                        latitude, longitude = geocodificar_bairro(bairro) if bairro else (None, None)
-                        
-                        nova_linha = pd.DataFrame([{
-                            'IDEIA': nova_ideia,
-                            'sentimento': sentimento,
-                            'confianca': confianca,
-                            'num_tokens': num_tokens,
-                            'bairro': bairro,
-                            'latitude': latitude,
-                            'longitude': longitude
-                        }])
-                        
-                        st.session_state.novas_ideias = pd.concat(
-                            [st.session_state.novas_ideias, nova_linha], 
-                            ignore_index=True
-                        )
-                        st.success("Ideia adicionada com sucesso!")
-                        st.balloons()
 
     # Combina dados apenas para o mapa
     df_completo = pd.concat([
