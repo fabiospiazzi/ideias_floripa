@@ -22,11 +22,16 @@ def carregar_dados(uploaded_file=None):
 
 # Lista fixa de bairros
 bairros_floripa = [
-    "Centro", "Trindade", "Ingleses do Rio Vermelho", "Canasvieiras", "Rio Tavares",
-    "Estreito", "Agronômica", "Capoeiras", "Itacorubi", "Campeche", "Córrego Grande",
-    "Jurerê", "Costeira do Pirajubaé", "Lagoa da Conceição", "Saco dos Limões", "Pantanal",
-    "Santa Mônica", "João Paulo", "Abraão", "Carianos", "Monte Verde", "Coqueiros",
-    "Barra da Lagoa", "Tapera", "Ribeirão da Ilha", "Sambaqui", "Armação", "Ratones"
+    "Abraão", "Agronômica", "Alto Ribeirão", "Armação", "Balneário", "Barra da Lagoa", 
+    "Cachoeira do Bom Jesus", "Cacupé", "Campeche", "Canasvieiras", "Canto dos Araçás",
+    "Capoeiras", "Carianos", "Carvoeira", "Centro", "Chácara do Espanha", "Coqueiros",
+    "Córrego Grande", "Costa de Dentro", "Costeira do Pirajubaé", "Estreito", "Fazenda do Rio Tavares",
+    "Ingleses do Rio Vermelho", "Ingleses", "Itacorubi", "Jardim Atlântico", "João Paulo", "Jurerê",
+    "Jurerê Internacional", "Lagoa da Conceição", "Monte Cristo", "Monte Verde", "Morro das Pedras",
+    "Pantanal", "Pântano do Sul", "Parque São Jorge", "Picadas do Sul", "Picadas", "Ponta das Canas",
+    "Praia Brava", "Ratones", "Ribeirão da Ilha", "Rio Tavares", "Rio Vermelho", "Sacramento",
+    "Saco dos Limões", "Sambaqui", "Santa Mônica", "Santo Antônio de Lisboa", "São João do Rio Vermelho",
+    "Tapera", "Trindade", "Vargem do Bom Jesus", "Vargem Grande", "Vargem Pequena"
 ]
 
 def extrair_bairro(texto):
