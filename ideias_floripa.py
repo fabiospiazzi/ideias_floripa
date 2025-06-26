@@ -134,17 +134,17 @@ def main():
     with st.expander("➕ Adicionar Nova Ideia", expanded=True):
         with st.form("nova_ideia_form"):
             nova_ideia = st.text_area(
-                "Digite sua ideia sobre Florianópolis:",
+                "Digite sua ideia, sugestão ou crítica sobre Florianópolis:",
                 height=150,
                 value=st.session_state.texto_ideia,
                 key="input_ideia"
             )
             col1, col2 = st.columns([4, 1])
             with col1:
-                enviar = st.form_submit_button("Analisar Sentimento")
+                enviar = st.form_submit_button("Enviar para Análise")
             with col2:
                 if st.form_submit_button("Limpar Texto"):
-                    st.session_state.texto_ideia = ""
+                    st.session_state.texto_ideia = " "
                     st.rerun()
             
             if enviar and nova_ideia:
