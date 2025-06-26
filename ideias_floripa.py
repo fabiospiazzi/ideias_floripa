@@ -10,6 +10,10 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 import time
 
+# Adicione no início do seu código (após os imports)
+if 'dados_processados' not in st.session_state:
+    st.session_state.dados_processados = None
+
 # Função para carregar CSV do GitHub ou upload
 @st.cache_data
 def carregar_dados(uploaded_file=None):
@@ -103,24 +107,26 @@ def main():
     if uploaded_file is not None or not st.session_state.novas_ideias.empty:
         sentiment_analyzer, tokenizer = carregar_modelo()
 
-    # Processa arquivo CSV quando carregado
-    if uploaded_file is not None:
-        with st.spinner("Processando arquivo CSV..."):
+    # Processamento do CSV (apenas na primeira carga)
+    if uploaded_file is not None and st.session_state.dados_processados is None:
+        with st.spinner('Processando arquivo CSV...'):
             df_temp = carregar_dados(uploaded_file)
-            if 'IDEIA' not in df_temp.columns:
-                st.error("O arquivo deve conter a coluna 'IDEIA'")
+            if 'IDEIA' in df_temp.columns:
+                sentiment_analyzer, tokenizer = carregar_modelo()
+                
+                df_temp[['sentimento', 'confianca', 'num_tokens']] = df_temp['IDEIA'].astype(str).apply(
+                    lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer)))
+                
+                df_temp['bairro'] = df_temp['IDEIA'].astype(str).apply(extrair_bairro)
+                df_temp[['latitude', 'longitude']] = df_temp['bairro'].apply(
+                    lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None]))
+                
+                st.session_state.dados_processados = df_temp
+                st.session_state.analyzer = sentiment_analyzer
+                st.session_state.tokenizer = tokenizer
+                st.success("Dados processados com sucesso!")
             else:
-                st.session_state.df_original = df_temp.copy()
-                st.session_state.df_original[['sentimento', 'confianca', 'num_tokens']] = (
-                    st.session_state.df_original['IDEIA'].astype(str).apply(
-                        lambda x: pd.Series(analisar_sentimento_completo(x, sentiment_analyzer, tokenizer))
-                ))
-                st.session_state.df_original['bairro'] = st.session_state.df_original['IDEIA'].astype(str).apply(extrair_bairro)
-                st.session_state.df_original[['latitude', 'longitude']] = (
-                    st.session_state.df_original['bairro'].apply(
-                        lambda x: pd.Series(geocodificar_bairro(x)) if pd.notna(x) else pd.Series([None, None])
-                ))
-                st.success("Arquivo CSV processado com sucesso!")
+                st.error("O arquivo deve conter a coluna 'IDEIA'")
 
     # Seção para adicionar nova ideia
     with st.expander("➕ Adicionar Nova Ideia", expanded=True):
@@ -152,11 +158,13 @@ def main():
                     st.balloons()
 
     # Combina dados apenas para o mapa
-    df_completo = pd.concat([st.session_state.df_original, st.session_state.novas_ideias], ignore_index=True)
-
+    df_completo = pd.concat([
+        st.session_state.dados_processados if st.session_state.dados_processados is not None else pd.DataFrame(),
+        st.session_state.novas_ideias
+    ], ignore_index=True)
+    
     # Mostra mapa se houver dados
     if not df_completo.empty:
-        st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
         mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
         for _, row in df_completo.dropna(subset=['latitude', 'longitude']).iterrows():
             cor = (
@@ -169,10 +177,16 @@ def main():
                 popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
                 icon=folium.Icon(color=cor)
             ).add_to(mapa)
-        st_folium(mapa, width=1000, height=600)
+        st_folium(mapa, width=1000, height=600, key="mapa")  # Adicione um key único
     else:
         st.info("Nenhum dado disponível para exibir o mapa. Carregue um arquivo CSV ou adicione uma nova ideia.")
 
+    if uploaded_file is not None:
+        if st.button("Processar Arquivo"):
+            st.session_state.dados_processados = None  # Reseta para reprocessar
+            st.experimental_rerun()
+
+    
     # Tabelas separadas
     col1, col2 = st.columns(2)
     
