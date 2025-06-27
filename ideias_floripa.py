@@ -28,17 +28,26 @@ def carregar_dados(uploaded_file=None):
 #############################################################LISTA DE COMPARAÇÃO DE BAIRROS##############################################################################
 # Lista fixa de bairros
 bairros_floripa = [
-    "Abraão", "Agronômica", "Alto Ribeirão", "Armação", "Balneário", "Barra da Lagoa", 
-    "Cachoeira do Bom Jesus", "Cacupé", "Campeche", "Canasvieiras", "Canto dos Araçás",
-    "Capoeiras", "Carianos", "Carvoeira", "Centro", "Chácara do Espanha", "Coqueiros",
-    "Córrego Grande", "Costa de Dentro", "Costeira do Pirajubaé", "Estreito", "Fazenda do Rio Tavares",
-    "Ingleses do Rio Vermelho", "Ingleses", "Itacorubi", "Jardim Atlântico", "João Paulo", "Jurerê",
-    "Jurerê Internacional", "Lagoa da Conceição", "Monte Cristo", "Monte Verde", "Morro das Pedras",
-    "Pantanal", "Pântano do Sul", "Parque São Jorge", "Picadas do Sul", "Picadas", "Ponta das Canas",
-    "Praia Brava", "Ratones", "Ribeirão da Ilha", "Rio Tavares", "Rio Vermelho", "Sacramento",
-    "Saco dos Limões", "Saco Grande", "Sambaqui", "Santa Mônica", "Santo Antônio de Lisboa", "São João do Rio Vermelho",
-    "Tapera", "Trindade", "Vargem do Bom Jesus", "Vargem Grande", "Vargem Pequena"
+    "Vargem Pequena", "Vargem Grande", "Vargem do Bom Jesus", "Vargem de Fora", "Trindade",
+    "Tapera da Base", "Tapera", "Santo Antônio", "Santinho", "Santa Mônica", "Sambaqui",
+    "Saco Grande", "Saco dos Limões", "Rio Vermelho", "Rio Tavares do Norte",
+    "Rio Tavares Central", "Rio das Pacas", "Ribeirão da Ilha", "Retiro", "Ressacada",
+    "Recanto dos Açores", "Ratones", "Praia Mole", "Praia Brava", "Porto da Lagoa",
+    "Ponta das Canas", "Pedrita", "Pântano do Sul", "Pantanal", "Morro do Peralta",
+    "Morro das Pedras", "Monte Verde", "Monte Cristo", "Moenda", "Lagoinha do Norte",
+    "Lagoa Pequena", "Lagoa", "Jurere Oeste", "Jurere Leste", "Jurerê", "José Mendes",
+    "João Paulo", "Jardim Atlântico", "Itaguaçu", "Itacorubi", "Ingleses Sul",
+    "Ingleses Norte", "Ingleses Centro", "Ingleses", "Forte", "Estreito", "Dunas da Lagoa",
+    "Daniela", "Costeiro do Ribeirão", "Costeira do Pirajubaé", "Córrego Grande",
+    "Coqueiros", "Coloninha", "Centro", "Carianos", "Capoeiras", "Capivari",
+    "Canto dos Araçás", "Canto do Lamim", "Canto da Lagoa", "Canto", "Canasvieiras",
+    "Campeche Sul", "Campeche Norte", "Campeche Leste", "Campeche Central",
+    "Caieira", "Caiacanga", "Cacupé", "Cachoeira do Bom Jesus Leste",
+    "Cachoeira do Bom Jesus", "Bom Abrigo", "Base Aérea", "Barra do Sambaqui",
+    "Barra da Lagoa", "Balneário", "Autódromo", "Armação", "Alto Ribeirão Leste",
+    "Alto Ribeirão", "Agronômica", "Açores", "Abraão"
 ]
+
 #############################################################EXTRAIR OA BAIRROS DO TEXTO##############################################################################
 def extrair_bairro(texto):
     texto_lower = texto.lower() #passa o texto para minusculo
