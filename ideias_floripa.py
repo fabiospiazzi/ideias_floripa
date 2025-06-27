@@ -210,7 +210,7 @@ def main():
                         ignore_index=True
                     )
                     if bairro is None:
-                        st.warning("⚠️ Não foi possível identificar um bairro válido na demanda. O mapa não será exibido para este registro.")
+                        st.warning("⚠️ Não foi possível identificar um bairro válido na demanda. O mapa/marcador não será exibido para este registro.")
                     else:
                         st.success("Ideia/Sugestão adicionada com sucesso! - Bairro Localizado!")
                         #st.balloons()
