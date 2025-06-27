@@ -53,11 +53,11 @@ geolocator = Nominatim(user_agent="floripa-sentimento-streamlit") #nome de usuá
 @st.cache_data # só geocodifica para aquele bairro uma vez
 def geocodificar_bairro(bairro):
     try:
-        local = geolocator.geocode(f"{bairro}, Florianópolis, SC, Brasil") #procura no openstreet map o nome do bairro mais Florianópois mais Brasil
+        local = geolocator.geocode(f"{bairro}, Florianópolis, SC, Brasil", timeout=10) #procura no openstreet map o nome do bairro mais Florianópois mais Brasil a cada 10 s
         if local:
             return (local.latitude, local.longitude) #Se acha, retorna latitude e longitude
-    except GeocoderTimedOut: #tenta conectar a cada 1 segundo, geralmente conecta.
-        time.sleep(1)
+    except GeocoderTimedOut: #tenta conectar a cada 2 segundos, geralmente conecta.
+        time.sleep(2)
         return geocodificar_bairro(bairro)
     return (None, None) #Se não acha o bairro, retorna None, None nas coordenadas.
 #############################################################CARREGA O MODELO BERT####################################################################################
