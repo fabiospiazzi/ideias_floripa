@@ -36,7 +36,7 @@ bairros_floripa = [
     "Jurerê Internacional", "Lagoa da Conceição", "Monte Cristo", "Monte Verde", "Morro das Pedras",
     "Pantanal", "Pântano do Sul", "Parque São Jorge", "Picadas do Sul", "Picadas", "Ponta das Canas",
     "Praia Brava", "Ratones", "Ribeirão da Ilha", "Rio Tavares", "Rio Vermelho", "Sacramento",
-    "Saco dos Limões", "Sambaqui", "Santa Mônica", "Santo Antônio de Lisboa", "São João do Rio Vermelho",
+    "Saco dos Limões", "Saco Grande", "Sambaqui", "Santa Mônica", "Santo Antônio de Lisboa", "São João do Rio Vermelho",
     "Tapera", "Trindade", "Vargem do Bom Jesus", "Vargem Grande", "Vargem Pequena"
 ]
 #############################################################EXTRAIR OA BAIRROS DO TEXTO##############################################################################
