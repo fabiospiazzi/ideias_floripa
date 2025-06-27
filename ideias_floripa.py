@@ -209,9 +209,11 @@ def main():
                         [st.session_state.novas_ideias, nova_linha], 
                         ignore_index=True
                     )
-                    st.session_state.texto_ideia = ""  # Limpa o texto após adicionar
-                    st.success("Ideia adicionada com sucesso!")
-                    #st.balloons()
+                    if bairro is None:
+                        st.warning("⚠️ Não foi possível identificar um bairro válido na demanda. O mapa não será exibido para este registro.")
+                    else:
+                        st.success("Ideia adicionada com sucesso!")
+                        #st.balloons()
 
     # Botão para limpar todos os dados
     if st.session_state.dados_processados is not None or not st.session_state.novas_ideias.empty:
@@ -233,20 +235,27 @@ def main():
     
     # Mostra mapa se houver dados
     if not df_completo.empty:
-        st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
-        mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
-        for _, row in df_completo.dropna(subset=['latitude', 'longitude']).iterrows():
-            cor = (
-                "green" if row['sentimento'] == "Positivo" else
-                "blue" if row['sentimento'] == "Neutro" else
-                "red"
-            )
-            folium.Marker(
-                location=[row['latitude'], row['longitude']],
-                popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
-                icon=folium.Icon(color=cor)
-            ).add_to(mapa)
-        st_folium(mapa, width=1000, height=600, key="mapa")
+        # Filtra apenas registros com geolocalização válida
+        df_com_mapa = df_completo.dropna(subset=['latitude', 'longitude'])
+        if not df_com_mapa.empty:
+            st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
+            mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
+            for _, row in df_com_mapa.iterrows():
+                cor = (
+                    "green" if row['sentimento'] == "Positivo" else
+                    "blue" if row['sentimento'] == "Neutro" else
+                    "red"
+                )
+                folium.Marker(
+                    location=[row['latitude'], row['longitude']],
+                    popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
+                    icon=folium.Icon(color=cor)
+                ).add_to(mapa)
+            st_folium(mapa, width=1000, height=600, key="mapa")
+        else:
+            st.warning("Nenhuma demanda com geolocalização válida para exibir no mapa.")
+    else:
+        st.info("Nenhum dado disponível para exibir o mapa. Carregue um arquivo CSV ou adicione uma nova ideia.")
 
     # Tabelas separadas
     col1, col2 = st.columns(2)
