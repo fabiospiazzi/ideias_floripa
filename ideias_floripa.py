@@ -111,13 +111,17 @@ def main():
     uploaded_file = st.file_uploader("📁 Faça upload de um CSV com a coluna 'IDEIA'", type=["csv"]) #Widget pra fazer o carregamento de um aquivo
 
     # Botão de processamento (só aparece se fizer o upload de um aquivo e arquivo ainda não foi processado)##################################################
-    if uploaded_file is not None and not st.session_state.arquivo_carregado:
+    if uploaded_file is not None: #and not st.session_state.arquivo_carregado:
         if st.button("⚙️Processar Arquivo", type="primary"):
             # Inicia o container de progresso
             progress_bar = st.progress(0)
             status_text = st.empty()  # Para mensagens dinâmicas
     
             with st.spinner('Processando arquivo CSV...'):
+                # Reseta o estado se já existirem dados processados
+                st.session_state.dados_processados = None
+                st.session_state.arquivo_carregado = False
+                
                 df_temp = carregar_dados(uploaded_file)
                 
                 if 'IDEIA' in df_temp.columns:
