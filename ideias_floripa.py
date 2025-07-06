@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import re
 import folium
+from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from geopy.geocoders import Nominatim
@@ -249,6 +250,7 @@ def main():
         if not df_com_mapa.empty:
             st.subheader("🗺️ Mapa com Ideias Geolocalizadas")
             mapa = folium.Map(location=[-27.5954, -48.5480], zoom_start=12)
+            marker_cluster = MarkerCluster().add_to(mapa)
             for _, row in df_com_mapa.iterrows():
                 cor = (
                     "green" if row['sentimento'] == "Positivo" else
@@ -257,10 +259,10 @@ def main():
                 )
                 folium.Marker(
                     location=[row['latitude'], row['longitude']],
-                    popup=f"<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
+                    popup=f"<b>Ideia:</b> {row['IDEIA'][:100]}...<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
                     icon=folium.Icon(color=cor)
-                ).add_to(mapa)
-            st_folium(mapa, width=1000, height=600, key="mapa")
+                ).add_to(marker_cluster)
+            st_folium(marker_cluster, width=1000, height=600, key="mapa")
         else:
             st.warning("Nenhuma demanda com geolocalização válida para exibir no mapa.")
     else:
