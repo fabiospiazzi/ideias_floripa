@@ -262,7 +262,7 @@ def main():
                     popup=f"<b>Ideia:</b> {row['IDEIA'][:100]}...<b>Bairro:</b> {row['bairro']}<br><b>Sentimento:</b> {row['sentimento']}<br><b>Confiança:</b> {row['confianca']:.2f}",
                     icon=folium.Icon(color=cor)
                 ).add_to(marker_cluster)
-            st_folium(marker_cluster, width=1000, height=600, key="mapa")
+            st_folium(mapa, width=1000, height=600, key="mapa")
         else:
             st.warning("Nenhuma demanda com geolocalização válida para exibir no mapa.")
     else:
